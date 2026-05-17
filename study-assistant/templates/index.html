@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Study Assistant</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f6fa;
+      --card: #ffffff;
+      --primary: #1A56A0;
+      --primary-light: #e8f0fb;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --success: #059669;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+    header .logo {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header p  { font-size: 0.8rem; opacity: 0.75; margin-top: 1px; }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+    .tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem;
+    }
+
+    .tab {
+      padding: 8px 18px; border-radius: 100px;
+      border: 1.5px solid var(--border);
+      background: var(--card); color: var(--muted);
+      font-size: 0.875rem; font-weight: 500; cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .tab:hover { border-color: var(--primary); color: var(--primary); }
+
+    .tab.active {
+      background: var(--primary); color: white;
+      border-color: var(--primary);
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h2 {
+      font-size: 1rem; font-weight: 600; margin-bottom: 4px; color: var(--text);
+    }
+
+    .card .desc {
+      font-size: 0.825rem; color: var(--muted); margin-bottom: 1.1rem;
+    }
+
+    label {
+      display: block; font-size: 0.8rem; font-weight: 600;
+      color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%; padding: 10px 14px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 0.9rem; color: var(--text); background: var(--bg);
+      outline: none; transition: border 0.18s;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus, textarea:focus, select:focus {
+      border-color: var(--primary); background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 120px; }
+
+    .row { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px; }
+
+    button.btn {
+      padding: 10px 22px; border-radius: 8px;
+      background: var(--primary); color: white;
+      border: none; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.18s; white-space: nowrap;
+    }
+
+    button.btn:hover { opacity: 0.88; }
+    button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .result-box {
+      margin-top: 1.25rem;
+      background: var(--primary-light);
+      border: 1px solid #c5d9f5;
+      border-radius: 10px;
+      padding: 1.1rem 1.25rem;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    .result-box.visible { display: block; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error { color: #dc2626; background: #fef2f2; border-color: #fca5a5; }
+
+    .badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 100px;
+      background: var(--primary-light); color: var(--primary);
+      margin-left: 8px; vertical-align: middle;
+    }
+
+    footer {
+      text-align: center; font-size: 0.78rem; color: var(--muted);
+      padding: 2rem 1rem 1.5rem;
+    }
+
+    footer a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎓</div>
+  <div>
+    <h1>AI Study Assistant</h1>
+    <p>Powered by Google Gemini API</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('explain', this)">💡 Explain Concept</button>
+    <button class="tab" onclick="switchTab('quiz', this)">📝 Generate Quiz</button>
+    <button class="tab" onclick="switchTab('summarise', this)">📄 Summarise Text</button>
+    <button class="tab" onclick="switchTab('roadmap', this)">🗺️ Learning Roadmap</button>
+  </div>
+
+  <!-- EXPLAIN -->
+  <div id="panel-explain" class="panel active">
+    <div class="card">
+      <h2>Explain a Concept <span class="badge">Gemini AI</span></h2>
+      <p class="desc">Enter any topic and get a clear, simple explanation with a real-world analogy.</p>
+      <label>Topic</label>
+      <input type="text" id="explain-topic" placeholder="e.g. REST APIs, recursion, polymorphism..." />
+      <div class="row">
+        <div style="flex:1">
+          <label>Level</label>
+          <select id="explain-level">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <button class="btn" id="explain-btn" onclick="callAPI('explain')">Explain</button>
+      </div>
+      <div class="result-box" id="explain-result"></div>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="panel-quiz" class="panel">
+    <div class="card">
+      <h2>Generate Quiz Questions <span class="badge">Gemini AI</span></h2>
+      <p class="desc">Get 3 MCQ questions on any topic to test your understanding.</p>
+      <label>Topic</label>
+      <input type="text" id="quiz-topic" placeholder="e.g. React hooks, SQL joins, linked lists..." />
+      <div class="row" style="justify-content: flex-end;">
+        <button class="btn" id="quiz-btn" onclick="callAPI('quiz')">Generate Quiz</button>
+      </div>
+      <div class="result-box" id="quiz-result"></div>
+    </div>
+  </div>
+
+  <!-- SUMMARISE -->
+  <div id="panel-summarise" class="panel">
+    <div class="card">
+      <h2>Summarise Text <span class="badge">Gemini AI</span></h2>
+      <p class="desc">Paste any study material — notes, articles, paragraphs — and get bullet-point key ideas.</p>
+      <label>Paste your text (max 5000 characters)</label>
+      <textarea id="summarise-text" placeholder="Paste your notes or reading material here..."></textarea>
+      <div class="row" style="justify-content: flex-end;">
+        <span id="char-count" style="font-size:0.8rem;color:var(--muted);align-self:center;">0 / 5000</span>
+        <button class="btn" id="summarise-btn" onclick="callAPI('summarise')">Summarise</button>
+      </div>
+      <div class="result-box" id="summarise-result"></div>
+    </div>
+  </div>
+
+  <!-- ROADMAP -->
+  <div id="panel-roadmap" class="panel">
+    <div class="card">
+      <h2>Learning Roadmap <span class="badge">Gemini AI</span></h2>
+      <p class="desc">Get a structured 4-week plan to learn any skill from scratch.</p>
+      <label>What do you want to learn?</label>
+      <input type="text" id="roadmap-topic" placeholder="e.g. React.js, machine learning, Node.js..." />
+      <div class="row" style="justify-content: flex-end;">
+        <button class="btn" id="roadmap-btn" onclick="callAPI('roadmap')">Generate Roadmap</button>
+      </div>
+      <div class="result-box" id="roadmap-result"></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Built by <strong>Sakshi Mishra</strong> · Flask + Gemini API ·
+  <a href="https://github.com/sakshi2we" target="_blank">github.com/sakshi2we</a>
+</footer>
+
+<script>
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  document.getElementById('summarise-text').addEventListener('input', function() {
+    document.getElementById('char-count').textContent = this.value.length + ' / 5000';
+  });
+
+  async function callAPI(type) {
+    const btn = document.getElementById(type + '-btn');
+    const resultBox = document.getElementById(type + '-result');
+    let body = {};
+
+    if (type === 'explain') {
+      const topic = document.getElementById('explain-topic').value.trim();
+      const level = document.getElementById('explain-level').value;
+      if (!topic) { alert('Please enter a topic.'); return; }
+      body = { topic, level };
+    } else if (type === 'quiz') {
+      const topic = document.getElementById('quiz-topic').value.trim();
+      if (!topic) { alert('Please enter a topic.'); return; }
+      body = { topic };
+    } else if (type === 'summarise') {
+      const text = document.getElementById('summarise-text').value.trim();
+      if (!text) { alert('Please paste some text.'); return; }
+      body = { text };
+    } else if (type === 'roadmap') {
+      const topic = document.getElementById('roadmap-topic').value.trim();
+      if (!topic) { alert('Please enter a topic.'); return; }
+      body = { topic };
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Thinking...';
+    resultBox.className = 'result-box visible';
+    resultBox.textContent = 'Generating response...';
+
+    try {
+      const res = await fetch('/api/' + type, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.error) {
+        resultBox.className = 'result-box visible error';
+        resultBox.textContent = 'Error: ' + data.error;
+      } else {
+        resultBox.className = 'result-box visible';
+        resultBox.textContent = data.result;
+      }
+    } catch (err) {
+      resultBox.className = 'result-box visible error';
+      resultBox.textContent = 'Could not connect to server. Make sure Flask is running.';
+    }
+
+    btn.disabled = false;
+    btn.textContent = type === 'explain' ? 'Explain'
+      : type === 'quiz' ? 'Generate Quiz'
+      : type === 'summarise' ? 'Summarise'
+      : 'Generate Roadmap';
+  }
+</script>
+
+</body>
+</html>
